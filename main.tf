@@ -7,6 +7,7 @@ resource "aws_instance" "nat_instance" {
   instance_type        = var.instance_type
   key_name             = var.ssh_key_name
   iam_instance_profile = aws_iam_instance_profile.nat_instance.name
+  source_dest_check = false
   primary_network_interface {
     network_interface_id = aws_network_interface.nat_instance.id
   }
