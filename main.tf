@@ -7,7 +7,6 @@ resource "aws_instance" "nat_instance" {
   instance_type        = var.instance_type
   key_name             = var.ssh_key_name
   iam_instance_profile = aws_iam_instance_profile.nat_instance.name
-  source_dest_check = false
   primary_network_interface {
     network_interface_id = aws_network_interface.nat_instance.id
   }
@@ -22,6 +21,14 @@ resource "aws_instance" "nat_instance" {
   })
   tags = {
     Name = "${var.name}-nat-instance"
+  }
+  # The provider forbids setting source_dest_check alongside primary_network_interface.
+  # Source/destination check is disabled on the dedicated ENI (device 0) below, which
+  # is what governs NAT forwarding. Ignore the instance-level attribute so Terraform
+  # does not revert it to its default (true) and break the NAT.
+  # https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#ignore_changes
+  lifecycle {
+    ignore_changes = [source_dest_check]
   }
 }
 
