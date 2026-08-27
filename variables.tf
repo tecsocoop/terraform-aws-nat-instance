@@ -41,3 +41,9 @@ variable "region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "tags" {
+  description = "Additional tags applied to all resources created by the module."
+  type        = map(string)
+  default     = {}
+}

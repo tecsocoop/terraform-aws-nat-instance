@@ -47,6 +47,7 @@ module "nat_instance" {
 | `ami_id`                 | AMI for the instance.                                             | string                              | `ami-07e37c8abeea5202c` (Debian 13)  |
 | `instance_type`          | Instance type.                                                    | string                              | `t3a.nano`                           |
 | `region`                 | AWS region, used for the SSM agent download endpoint.            | string                              | `us-east-1`                          |
+| `tags`                   | Additional tags applied to all resources created by the module.  | map(string)                          | `{}`                                 |
 
 </details>
 

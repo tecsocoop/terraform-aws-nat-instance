@@ -19,9 +19,9 @@ resource "aws_instance" "nat_instance" {
     vpc_cidr = data.aws_vpc.selected.cidr_block
     region   = var.region
   })
-  tags = {
+  tags = merge(var.tags, {
     Name = "${var.name}-nat-instance"
-  }
+  })
   # The provider forbids setting source_dest_check alongside primary_network_interface.
   # Source/destination check is disabled on the dedicated ENI (device 0) below, which
   # is what governs NAT forwarding. Ignore the instance-level attribute so Terraform
@@ -45,6 +45,7 @@ data "aws_iam_policy_document" "ec2_assume" {
 resource "aws_iam_role" "nat_instance" {
   name               = "${var.name}-nat-instance-ssm"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
+  tags               = var.tags
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_core" {
@@ -55,15 +56,16 @@ resource "aws_iam_role_policy_attachment" "ssm_core" {
 resource "aws_iam_instance_profile" "nat_instance" {
   name = "${var.name}-nat-instance-ssm"
   role = aws_iam_role.nat_instance.name
+  tags = var.tags
 }
 
 resource "aws_network_interface" "nat_instance" {
   subnet_id         = var.public_subnet_id
   source_dest_check = false
   security_groups   = [aws_security_group.nat_instance.id]
-  tags = {
+  tags = merge(var.tags, {
     Name = "${var.name}-nat-instance"
-  }
+  })
 }
 
 resource "aws_route" "private" {
@@ -75,15 +77,16 @@ resource "aws_route" "private" {
 resource "aws_eip" "nat_instance" {
   network_interface = aws_network_interface.nat_instance.id
   depends_on        = [aws_network_interface.nat_instance, aws_instance.nat_instance]
-  tags = {
+  tags = merge(var.tags, {
     Name = "${var.name}-nat-instance"
-  }
+  })
 }
 
 resource "aws_security_group" "nat_instance" {
   name        = "${var.name}-nat-instance"
   description = "Security group for NAT instance"
   vpc_id      = var.vpc_id
+  tags        = var.tags
 
   ingress = [
     {
