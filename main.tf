@@ -14,6 +14,9 @@ resource "aws_instance" "nat_instance" {
     volume_size           = "8"
     volume_type           = "gp3"
     delete_on_termination = true
+    tags = merge(var.tags, {
+      Name = "${var.name}-nat-instance"
+    })
   }
   user_data = templatefile("${path.module}/ec2_user_data.tpl", {
     vpc_cidr = data.aws_vpc.selected.cidr_block
