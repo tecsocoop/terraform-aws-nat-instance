@@ -65,7 +65,7 @@ resource "aws_iam_instance_profile" "nat_instance" {
 resource "aws_network_interface" "nat_instance" {
   subnet_id         = var.public_subnet_id
   source_dest_check = false
-  security_groups   = [aws_security_group.nat_instance.id]
+  security_groups   = concat([aws_security_group.nat_instance.id], var.additional_security_group_ids)
   tags = merge(var.tags, {
     Name = "${var.name}-nat-instance"
   })
@@ -85,37 +85,45 @@ resource "aws_eip" "nat_instance" {
   })
 }
 
+# Rules are managed with dedicated aws_vpc_security_group_{ingress,egress}_rule
+# resources instead of the inline ingress/egress attributes on
+# aws_security_group, per the current AWS provider guidance (v5+):
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule
 resource "aws_security_group" "nat_instance" {
   name        = "${var.name}-nat-instance"
   description = "Security group for NAT instance"
   vpc_id      = var.vpc_id
   tags        = var.tags
+}
 
-  ingress = [
-    {
-      description      = "Ingress CIDR"
-      from_port        = 0
-      to_port          = 0
-      protocol         = "-1"
-      cidr_blocks      = [data.aws_vpc.selected.cidr_block]
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = false
-    }
-  ]
+resource "aws_vpc_security_group_ingress_rule" "vpc_cidr" {
+  security_group_id = aws_security_group.nat_instance.id
+  description       = "Ingress CIDR"
+  cidr_ipv4         = data.aws_vpc.selected.cidr_block
+  ip_protocol       = "-1"
+  tags              = var.tags
+}
 
-  egress = [
-    {
-      description      = "Default egress"
-      from_port        = 0
-      to_port          = 0
-      protocol         = "-1"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = false
-    }
-  ]
+resource "aws_vpc_security_group_egress_rule" "default" {
+  security_group_id = aws_security_group.nat_instance.id
+  description       = "Default egress"
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+  tags              = var.tags
+}
+
+resource "aws_vpc_security_group_ingress_rule" "additional" {
+  for_each = var.additional_ingress_rules
+
+  security_group_id            = aws_security_group.nat_instance.id
+  description                  = each.value.description
+  from_port                    = each.value.from_port
+  to_port                      = each.value.to_port
+  ip_protocol                  = each.value.ip_protocol
+  cidr_ipv4                    = each.value.cidr_ipv4
+  cidr_ipv6                    = each.value.cidr_ipv6
+  prefix_list_id               = each.value.prefix_list_id
+  referenced_security_group_id = each.value.referenced_security_group_id
+  tags                         = var.tags
 }

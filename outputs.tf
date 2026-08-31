@@ -7,3 +7,8 @@ output "instance_id" {
   description = "NAT instance id (use with SSM Session Manager)"
   value       = aws_instance.nat_instance.id
 }
+
+output "security_group_id" {
+  description = "Security group id created for the NAT instance"
+  value       = aws_security_group.nat_instance.id
+}

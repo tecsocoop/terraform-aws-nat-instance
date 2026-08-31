@@ -34,6 +34,40 @@ module "nat_instance" {
 > via `private_route_table_id`) toward the NAT instance ENI. That route no
 > longer lives in the VPC module.
 
+> [!note]
+> The security group rules are managed with dedicated
+> `aws_vpc_security_group_ingress_rule` / `aws_vpc_security_group_egress_rule`
+> resources instead of the inline `ingress`/`egress` attributes of
+> `aws_security_group` (current AWS provider guidance, v5+):
+> https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule
+
+### Extra security group rules and extra security groups
+
+```hcl
+module "nat_instance" {
+  source  = "tecsocoop/nat-instance/aws"
+
+  name                    = "sit-tecso"
+  vpc_id                  = module.vpc.vpc_id
+  public_subnet_id        = module.vpc.public_subnet_ids["1a"]
+  private_route_table_id  = module.vpc.private_route_table_id
+
+  # Extra rules on the security group created by the module
+  additional_ingress_rules = {
+    vpn_ssh = {
+      description = "SSH from the office VPN"
+      from_port   = 22
+      to_port     = 22
+      ip_protocol = "tcp"
+      cidr_ipv4   = "203.0.113.0/24"
+    }
+  }
+
+  # Extra pre-existing security groups attached to the NAT instance ENI
+  additional_security_group_ids = [aws_security_group.extra.id]
+}
+```
+
 <details>
 <summary>Variables</summary>
 
@@ -48,6 +82,8 @@ module "nat_instance" {
 | `instance_type`          | Instance type.                                                    | string                              | `t3a.nano`                           |
 | `region`                 | AWS region, used for the SSM agent download endpoint.            | string                              | `us-east-1`                          |
 | `tags`                   | Additional tags applied to all resources created by the module.  | map(string)                          | `{}`                                 |
+| `additional_security_group_ids` | Extra security group ids attached to the NAT instance ENI, besides the one created by the module. | list(string)          | `[]`                                 |
+| `additional_ingress_rules` | Extra ingress rules appended to the module's security group (map keyed by rule name, `aws_vpc_security_group_ingress_rule` arguments). | map(object)          | `{}`                                 |
 
 </details>
 
@@ -55,9 +91,10 @@ module "nat_instance" {
 <summary>Outputs</summary>
 
 | Output                 | Description                                             |
-|------------------------|---------------------------------------------------------|
+|------------------------|-----------------------------------------------------------------|
 | `network_interface_id` | Network interface id of the NAT.                        |
 | `instance_id`          | NAT instance id (to connect via SSM).                   |
+| `security_group_id`    | Security group id created for the NAT instance.         |
 
 </details>
 

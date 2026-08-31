@@ -47,3 +47,24 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "additional_security_group_ids" {
+  description = "Extra security group ids attached to the NAT instance network interface, in addition to the one created by this module"
+  type        = list(string)
+  default     = []
+}
+
+variable "additional_ingress_rules" {
+  description = "Extra ingress rules appended to the NAT instance security group, keyed by rule name. See aws_vpc_security_group_ingress_rule for the argument reference: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule"
+  type = map(object({
+    description                  = optional(string)
+    from_port                    = optional(number)
+    to_port                      = optional(number)
+    ip_protocol                  = string
+    cidr_ipv4                    = optional(string)
+    cidr_ipv6                    = optional(string)
+    prefix_list_id               = optional(string)
+    referenced_security_group_id = optional(string)
+  }))
+  default = {}
+}
