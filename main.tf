@@ -22,6 +22,9 @@ resource "aws_instance" "nat_instance" {
     vpc_cidr = data.aws_vpc.selected.cidr_block
     region   = var.region
   })
+
+  user_data_replace_on_change = true
+
   tags = merge(var.tags, {
     Name = "${var.name}-nat-instance"
   })
