@@ -8,6 +8,17 @@ private subnets of a VPC: it creates the EC2 instance, its network interface
 Designed to be used together with the `terraform-aws-vpc` module, consuming its
 outputs (`vpc_id`, `public_subnet_ids`, `private_route_table_id`).
 
+> [!note]
+> IPv4 forwarding is enforced by a dedicated `nat-ip-forward.service` systemd
+> unit (created and enabled by the `user_data` script), ordered
+> `After=systemd-networkd.service`. This guarantees `net.ipv4.ip_forward=1` on
+> every boot, not just the first one: cloud-init's `user_data` only runs once
+> per instance, and on subsequent boots `systemd-networkd` resets
+> `ip_forward` back to `0` (default `IPForward=no` on the netplan-rendered
+> `.network` file), overriding whatever `/etc/sysctl.conf` set earlier in
+> the boot. See
+> https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html#IPForward=
+
 ## Requirements
 
 | Name      | Version   |

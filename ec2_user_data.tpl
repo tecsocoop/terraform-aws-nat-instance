@@ -22,8 +22,25 @@ sudo /usr/sbin/iptables -t nat -A POSTROUTING -s ${vpc_cidr} -j MASQUERADE #####
 
 sudo bash -c "iptables-save > /etc/iptables/rules.v4"
 
-#### Proc ip forward
+#### IP forwarding (persistent across reboots)
 
-sudo bash -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
+sudo bash -c 'cat > /etc/systemd/system/nat-ip-forward.service' <<'EOF'
+[Unit]
+Description=Enable IPv4 forwarding for NAT instance
+After=systemd-networkd.service network-online.target
+Wants=network-online.target
 
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/sysctl -w net.ipv4.ip_forward=1
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now nat-ip-forward.service
+
+#For reference
 sudo bash -c 'echo net.ipv4.ip_forward = 1 >> /etc/sysctl.conf'
